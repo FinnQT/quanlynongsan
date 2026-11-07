@@ -1,0 +1,39 @@
+{
+  "name": "quan-ly-nong-san",
+  "version": "1.0.0",
+  "description": "Quản lý thu mua, bán ra, chi phí, tồn kho và lợi nhuận nông sản",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron --no-warnings .",
+    "test": "node tests/ledger.test.js",
+    "dist": "electron-builder --win nsis"
+  },
+  "dependencies": {
+    "archiver-utils": "^2.1.0",
+    "balanced-match": "^1.0.2",
+    "bluebird": "^3.4.7",
+    "brace-expansion": "^1.1.11",
+    "call-bind-apply-helpers": "^1.0.1",
+    "es-abstract-get": "^1.0.0",
+    "exceljs": "^4.4.0",
+    "minimatch": "^3.1.2",
+    "mkdirp": "^0.5.6",
+    "rimraf": "^2.7.1",
+    "side-channel-list": "^1.0.0",
+    "side-channel-map": "^1.0.1",
+    "side-channel-weakmap": "^1.0.2"
+  },
+  "devDependencies": {
+    "electron": "^38.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "vn.quanlynongsan.app",
+    "productName": "Quan Ly Nong San",
+    "electronDist": "node_modules/electron/dist",
+    "beforePack": "src/main/beforePack.js",
+    "files": ["src/**/*", "package.json"],
+    "win": { "target": "nsis" },
+    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true }
+  }
+}

@@ -1,0 +1,28 @@
+# Node / Frontend (Vue)
+node_modules/
+dist/
+npm-debug.log
+yarn-error.log
+.pnpm-debug.log
+
+# Backend (PHP/Laravel)
+vendor/
+.env
+.env.backup
+.phpunit.result.cache
+
+# Hệ điều hành (OS)
+.DS_Store
+Thumbs.db
+
+# IDE / Trình soạn thảo (VS Code, JetBrains)
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Các file log và debug hệ thống
+*.log
