@@ -5,8 +5,7 @@
  *  - Bộ lọc nhập số (chặn nhập chữ, tự định dạng dấu phẩy hàng nghìn cho tiền tệ).
  *  - Combobox chọn/tìm kiếm Khách hàng trực tiếp theo chữ cái trong form Thu mua.
  */
-const { api, exportExcel, importExcel, backupDb, restoreDb } = window.bridge;
-
+const { api, exportExcel, importExcel, backupDb, restoreDb, importCustomers, customerTemplate } = window.bridge;
 /* ---------- tiện ích ---------- */
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -19,7 +18,7 @@ const dmy = (d) => (d ? d.split('-').reverse().join('/') : '');
 const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
 const options = (list, first = '') => (first ? `<option value="">${first}</option>` : '') + list.map((x) => `<option>${esc(x)}</option>`).join('');
 const emptyRow = (cols, text) => `<tr><td colspan="${cols}" class="empty">${text}</td></tr>`;
-const payPill = (p) => (p ? `<span class="pill ${p.toLowerCase()}">${p}</span>` : '<span class="pill none">⏳ Chưa TT</span>');
+const payPill = (p) => (p ? `<span class="pill ${p.toLowerCase()}">${p}</span>` : '');
 const cleanMsg = (e) => e.message.replace(/^Error invoking remote method '\w+': Error: /, '');
 const normVi = (s) => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase().trim();
 
@@ -235,11 +234,15 @@ function confirmBox(title, text, okLabel = 'Xác nhận') {
 }
 
 /* ---------- điều hướng ---------- */
-const VIEWS = ['dash', 'list', 'cust', 'sales', 'cost', 'stock', 'excel', 'trash', 'hist', 'settings'];
+const VIEWS = ['dash', 'agri', 'cust', 'excel', 'trash', 'hist', 'settings'];
+// Màn hình Nông sản gộp 4 tab: list (thu mua), sales (bán ra), cost (chi phí), stock (tồn kho & lợi nhuận)
+const AGRI_TABS = ['list', 'sales', 'cost', 'stock'];
+let agriTab = 'list';
 const loaders = {};
 let current = 'dash';
 
 async function show(v) {
+  if (AGRI_TABS.includes(v)) { agriTab = v; v = 'agri'; }   // show('list'|'sales'|'cost'|'stock') -> mở tab tương ứng
   current = v;
   VIEWS.forEach((k) => $('#v-' + k).classList.toggle('hide', k !== v));
   $$('#nav button').forEach((b) => b.classList.toggle('on', b.dataset.v === v));
@@ -452,7 +455,7 @@ async function printPurchase(id) {
     <h2>PHIẾU THU MUA NÔNG SẢN</h2>
     <p class="p-sub">Mã phiếu: <b>${esc(r.id)}</b> — Ngày: <b>${dmy(r.date)}</b></p>
     <p>Họ tên người bán: <b>${esc(r.name)}</b> ${r.phone ? `· SĐT: <b>${esc(r.phone)}</b>` : ''} ${r.cccd ? `· CCCD: <b>${esc(r.cccd)}</b>` : ''}<br>
-    Địa chỉ: ${esc(r.addr || '—')} · Thanh toán: <b>${r.pay || 'Chưa thanh toán (Công nợ)'}</b></p>
+    Địa chỉ: ${esc(r.addr || '—')} · Thanh toán: <b>${r.pay || '—'}</b></p>
     <table>
       <thead><tr><th>Tên hàng hóa</th><th class="r">Số lượng (kg)</th><th class="r">Đơn giá (đ/kg)</th><th class="r">Thành tiền (đ)</th></tr></thead>
       <tbody><tr><td><b>${esc(r.item)}</b></td><td class="r">${fmt(r.qty)}</td><td class="r">${money(r.price)}</td><td class="r"><b>${money(tot)} đ</b></td></tr></tbody>
@@ -488,8 +491,7 @@ loaders.list = async () => {
 
   const sumQty = rows.reduce((s, r) => s + r.qty, 0);
   const sumAmt = rows.reduce((s, r) => s + r.total, 0);
-  const unpaidAmt = rows.filter((r) => !r.pay).reduce((s, r) => s + r.total, 0);
-  $('#sum').textContent = `${rows.length} giao dịch · ${fmt(sumQty)} kg · Tổng ${money(sumAmt)} đ${unpaidAmt ? ` · Chưa TT: ${money(unpaidAmt)} đ` : ''} · ${badCount} cần kiểm tra`;
+  $('#sum').textContent = `${rows.length} giao dịch · ${fmt(sumQty)} kg · Tổng ${money(sumAmt)} đ · ${badCount} cần kiểm tra`;
   $('#tb').innerHTML = rows.map((r) => {
     const eyeBtn = r.hasCccdImg ? `<button type="button" class="eye-pill" data-act="view-cccd" data-id="${r.custId}" title="Xem hình CCCD của ${esc(r.name)}">👁️ CCCD</button>` : '';
     const actEye = r.hasCccdImg ? `<button class="icon-btn" data-act="view-cccd" data-id="${r.custId}" title="Xem hình CCCD" aria-label="Xem CCCD ${esc(r.name)}">👁️</button>` : '';
@@ -690,11 +692,25 @@ $('#k-sync').onclick = () => guard(async () => {
   await loaders.cust();
 });
 
+$('#k-tpl').onclick = () => guard(async () => {
+  const file = await customerTemplate();
+  if (file) toast('Đã lưu file mẫu: ' + file);
+});
+
+$('#k-import').onclick = () => guard(async () => {
+  const r = await importCustomers();
+  if (!r) return;
+  let msg = `Đã nhập ${r.added} khách hàng mới`;
+  if (r.skipped) msg += `, bỏ qua ${r.skipped} dòng trùng`;
+  if (r.errors.length) msg += `, ${r.errors.length} dòng lỗi. ${r.errors.slice(0, 3).join(' | ')}`;
+  toast(msg, r.errors.length > 0 && !r.added);
+  await loaders.cust();
+  if (r.errors.length) console.warn('Lỗi nhập khách hàng:', r.errors);
+});
+
 loaders.cust = async () => {
   const rows = await api('listCustomers', { q: $('#kq').value });
-  const sumQty = rows.reduce((s, c) => s + c.totalQty, 0);
-  const sumAmt = rows.reduce((s, c) => s + c.totalAmt, 0);
-  $('#k-sum').textContent = `${rows.length} khách hàng · Tổng mua: ${fmt(sumQty)} kg · ${money(sumAmt)} đ`;
+  $('#k-sum').textContent = `${rows.length} khách hàng`;
   $('#k-table').innerHTML = rows.map((c) => {
     const eyePill = c.hasCccdImg ? `<button type="button" class="eye-pill" data-act="view-cccd" data-id="${c.id}" title="Xem hình CCCD của ${esc(c.name)}">👁️ Xem CCCD</button>` : '';
     const actEye = c.hasCccdImg ? `<button class="icon-btn" data-act="view-cccd" data-id="${c.id}" title="Xem hình CCCD" aria-label="Xem CCCD ${c.id}">👁️</button>` : '';
@@ -704,14 +720,11 @@ loaders.cust = async () => {
     <td class="nowrap">${esc(c.phone || '—')}</td>
     <td class="nowrap">${esc(c.cccd || '—')}${eyePill}</td>
     <td>${esc(c.addr || '—')}</td>
-    <td class="r"><span class="qty">${c.txCount} lần</span></td>
-    <td class="r"><span class="qty">${fmt(c.totalQty)} kg</span></td>
-    <td class="r">${moneyTag(c.totalAmt, 'out')}</td>
     <td>${esc(c.note)}</td>
     <td class="c nowrap">${actEye}<button class="icon-btn" data-act="edit-cust" data-id="${c.id}" title="Sửa / Thêm ảnh CCCD" aria-label="Sửa ${c.id}">✏️</button><button class="icon-btn d" data-act="del" data-kind="customer" data-id="${c.id}" title="Xóa" aria-label="Xóa ${c.id}">🗑️</button></td>
   </tr>`;
-  }).join('') || emptyRow(10, 'Chưa có khách hàng nào. Bấm “＋ Thêm khách hàng” hoặc “🔄 Đồng bộ từ Thu mua”.');
-  $('#k-foot').innerHTML = rows.length ? `<tr><th colspan="5">TỔNG CỘNG (${rows.length} khách hàng)</th><th class="r">${rows.reduce((s, c) => s + c.txCount, 0)} lần</th><th class="r">${fmt(sumQty)} kg</th><th class="r">${moneyTag(sumAmt, 'out')}</th><th colspan="2"></th></tr>` : '';
+  }).join('') || emptyRow(7, 'Chưa có khách hàng nào. Bấm “＋ Thêm khách hàng” hoặc “🔄 Đồng bộ từ Thu mua”.');
+  $('#k-foot').innerHTML = rows.length ? `<tr><th colspan="7">TỔNG CỘNG (${rows.length} khách hàng)</th></tr>` : '';
 };
 $('#kq').addEventListener('input', () => guard(loaders.cust));
 
@@ -775,7 +788,7 @@ $('#s-save').onclick = () => inDialog('dlg-sale', async () => {
 
 loaders.sales = async () => {
   await refreshItemSelects();
-  const rows = await api('listSales', { from: $('#sq-from').value, to: $('#sq-to').value, item: $('#sq-item').value });
+  const rows = await api('listSales', { q: $('#sq-q').value, from: $('#sq-from').value, to: $('#sq-to').value, item: $('#sq-item').value });
   const sumQty = rows.reduce((s, r) => s + r.qty, 0);
   const sumRev = rows.reduce((s, r) => s + r.revenue, 0);
   $('#s-table').innerHTML = rows.map((r) => `<tr>
@@ -790,7 +803,7 @@ loaders.sales = async () => {
   </tr>`).join('') || emptyRow(8, 'Chưa có lần bán nào.');
   $('#s-foot').innerHTML = rows.length ? `<tr><th colspan="3">TỔNG CỘNG (${rows.length} lần bán)</th><th class="r">${fmt(sumQty)} kg</th><th></th><th class="r">${moneyTag(sumRev, 'in')}</th><th colspan="2"></th></tr>` : '';
 };
-['sq-from', 'sq-to', 'sq-item'].forEach((id) => ($('#' + id).addEventListener('input', () => guard(loaders.sales))));
+['sq-q', 'sq-from', 'sq-to', 'sq-item'].forEach((id) => ($('#' + id).addEventListener('input', () => guard(loaders.sales))));
 
 /* ---------- CHI PHÍ (Thêm & Sửa) ---------- */
 $('#c-date').addEventListener('input', () => updatePreviewId('cost', 'c-date', 'c-id', editCostId));
@@ -820,7 +833,7 @@ $('#c-save').onclick = () => inDialog('dlg-cost', async () => {
 
 loaders.cost = async () => {
   await refreshItemSelects();
-  const rows = await api('listCosts', { from: $('#cq-from').value, to: $('#cq-to').value, item: $('#cq-item').value });
+  const rows = await api('listCosts', { q: $('#cq-q').value, from: $('#cq-from').value, to: $('#cq-to').value, item: $('#cq-item').value });
   $('#c-table').innerHTML = rows.map((r) => `<tr>
     <td class="nowrap"><b>${r.id}</b></td>
     <td class="nowrap">${dmy(r.date)}</td>
@@ -832,7 +845,7 @@ loaders.cost = async () => {
   </tr>`).join('') || emptyRow(7, 'Chưa có chi phí nào.');
   $('#c-foot').innerHTML = rows.length ? `<tr><th colspan="4">TỔNG CHI PHÍ</th><th class="r">${moneyTag(rows.reduce((s, r) => s + r.amount, 0), 'out')}</th><th colspan="2"></th></tr>` : '';
 };
-['cq-from', 'cq-to', 'cq-item'].forEach((id) => ($('#' + id).addEventListener('input', () => guard(loaders.cost))));
+['cq-q', 'cq-from', 'cq-to', 'cq-item'].forEach((id) => ($('#' + id).addEventListener('input', () => guard(loaders.cost))));
 
 /* ---------- TỒN KHO & LỢI NHUẬN ---------- */
 loaders.stock = async () => {
@@ -842,40 +855,80 @@ loaders.stock = async () => {
   sel.value = names.includes(cur) ? cur : '';
 
   const rows = sel.value ? allRows.filter((r) => r.item === sel.value) : allRows;
-  const cols = ['inQty', 'inCost', 'soldQty', 'qty', 'avgCost', 'cost', 'revenue', 'profit', 'expense', 'net'];
+  const cols = ['inQty', 'inCost', 'soldQty', 'qty', 'avgCost', 'cost', 'revenue', 'expense', 'net'];
   const sum = (k) => rows.reduce((s, z) => s + z[k], 0);
   const cell = (k, z) => {
     if (['inQty', 'soldQty', 'qty'].includes(k)) return `<span class="qty">${fmt(z[k])}</span>`;
     if (k === 'net') return moneyTag(z[k], z[k] >= 0 ? 'in' : 'loss');
-    if (k === 'revenue' || k === 'profit') return `<span class="amt" style="color:var(--money)">${money(z[k])} đ</span>`;
+    if (k === 'revenue') return `<span class="amt" style="color:var(--money)">${money(z[k])} đ</span>`;
     if (k === 'expense') return `<span class="amt" style="color:var(--cost)">${money(z[k])} đ</span>`;
     return `<span class="amt">${money(z[k])} đ</span>`;
   };
-  $('#stock-table').innerHTML = rows.map((z) => `<tr><td><b>${esc(z.item)}</b></td>${cols.map((k) => `<td class="r">${cell(k, z)}</td>`).join('')}</tr>`).join('') || emptyRow(11, 'Chưa có dữ liệu nhập hàng.');
+  $('#stock-table').innerHTML = rows.map((z) => `<tr><td><b>${esc(z.item)}</b></td>${cols.map((k) => `<td class="r">${cell(k, z)}</td>`).join('')}</tr>`).join('') || emptyRow(10, 'Chưa có dữ liệu nhập hàng.');
   $('#stock-foot').innerHTML = rows.length ? `<tr><th>TỔNG CỘNG</th>${cols.map((k) => {
     if (k === 'avgCost') return '<th></th>';
     if (['inQty', 'soldQty', 'qty'].includes(k)) return `<th class="r">${fmt(sum(k))}</th>`;
+    if (k === 'net') return `<th class="r"><span class="total-pill ${sum(k) >= 0 ? 'in' : 'loss'}">${money(sum(k))} đ</span></th>`;
     return `<th class="r">${money(sum(k))} đ</th>`;
   }).join('')}</tr>` : '';
   const over = allRows.filter((z) => z.oversold).map((z) => z.item);
-  $('#stock-note').textContent = over.length ? `⚠ Bán vượt lượng tồn: ${over.join(', ')}. Hãy kiểm tra ngày nhập/bán.` : 'Lãi gộp = doanh thu − giá vốn hàng đã bán. Lợi nhuận sau chi phí = lãi gộp − chi phí.';
+  $('#stock-note').textContent = over.length ? `⚠ Bán vượt lượng tồn: ${over.join(', ')}. Hãy kiểm tra ngày nhập/bán.` : 'Lợi Nhuận Cuối = doanh thu − giá vốn hàng đã bán − chi phí.';
 };
 $('#st-item').addEventListener('change', () => guard(loaders.stock));
 
-/* ---------- TỔNG QUAN ---------- */
-loaders.dash = async () => {
-  const [stock, { rows, badCount }] = await Promise.all([api('stockReport'), api('listPurchases', {})]);
-  const sum = (k) => stock.reduce((s, z) => s + z[k], 0);
-  const net = sum('net');
-  $('#kpis').innerHTML = [
-    ['Tổng hàng tồn kho', fmt(sum('qty')) + ' kg', ''],
+/* ---------- MÀN HÌNH NÔNG SẢN (gộp tab) ---------- */
+loaders.agri = async () => {
+  const stock = await api('stockReport');
+  const sum = (k) => stock.reduce((s, z) => s + z[k], 0), net = sum('net');
+  $('#a-kpis').innerHTML = [
+    ['Tồn kho nông sản', fmt(sum('qty')) + ' kg', ''],
     ['Giá trị tồn kho', money(sum('cost')) + ' đ', ''],
     ['Doanh thu đã bán', money(sum('revenue')) + ' đ', 'good'],
-    ['Lợi nhuận sau chi phí', money(net) + ' đ', net >= 0 ? 'good' : 'bad'],
+    ['Lợi Nhuận Cuối', money(net) + ' đ', net >= 0 ? 'good' : 'bad'],
   ].map(([t, v, c]) => `<div class="kpi ${c}"><small>${t}</small><b>${v}</b></div>`).join('');
-  $('#alert-box').innerHTML = badCount ? `<div class="alert"><span>⚠ Có ${badCount} giao dịch thu mua cần kiểm tra (thiếu thanh toán, trên 5 triệu chưa CK, trùng người bán...)</span><button class="btn s" data-bad>Xem ngay</button></div>` : '';
-  $('#dash-stock').innerHTML = stock.map((z) => `<tr><td><b>${esc(z.item)}</b></td><td class="r"><span class="qty">${fmt(z.qty)}</span></td><td class="r"><span class="unit-price">${money(z.avgCost)} đ</span></td><td class="r"><span class="amt">${money(z.cost)} đ</span></td><td class="r">${moneyTag(z.net, z.net >= 0 ? 'in' : 'loss')}</td></tr>`).join('') || emptyRow(5, 'Chưa có dữ liệu.');
-  $('#dash-recent').innerHTML = rows.slice(0, 6).map((r) => `<tr><td class="nowrap">${dmy(r.date)}</td><td><b>${esc(r.name)}</b></td><td>${esc(r.item)}</td><td class="r">${moneyTag(r.total, 'out')}</td></tr>`).join('') || emptyRow(4, 'Chưa có giao dịch.');
+  AGRI_TABS.forEach((k) => {
+    $('#ap-' + k).classList.toggle('hide', k !== agriTab);
+    $(`[data-atab="${k}"]`).classList.toggle('ghost', k !== agriTab);
+  });
+  await loaders[agriTab]();
+};
+
+/* ---------- TỔNG QUAN ---------- */
+loaders.dash = async () => {
+  const [stock, { rows, badCount }, sales, fstock, fsales] = await Promise.all([
+    api('stockReport'), api('listPurchases', {}), api('listSales', {}), api('fertStock'), api('listFertSales', {}),
+  ]);
+  const sum = (arr, k) => arr.reduce((s, z) => s + z[k], 0);
+  const kpis = (arr, unit, revLabel) => {
+    const net = sum(arr, 'net');
+    return [
+      ['Tồn kho', fmt(sum(arr, 'qty')) + ' ' + unit, ''],
+      ['Giá trị tồn kho', money(sum(arr, 'cost')) + ' đ', ''],
+      [revLabel, money(sum(arr, 'revenue')) + ' đ', 'good'],
+      ['Lợi Nhuận Cuối', money(net) + ' đ', net >= 0 ? 'good' : 'bad'],
+    ].map(([t, v, c]) => `<div class="kpi ${c}"><small>${t}</small><b>${v}</b></div>`).join('');
+  };
+  $('#kpis').innerHTML = kpis(stock, 'kg', 'Doanh thu đã bán');
+  $('#kpis-fert').innerHTML = kpis(fstock, 'bao', 'Doanh thu đã bán');
+
+  // Cảnh báo: giao dịch thu mua bất thường + bán vượt tồn kho
+  const over = [...stock.filter((z) => z.oversold).map((z) => z.item + ' (nông sản)'), ...fstock.filter((z) => z.oversold).map((z) => z.item + ' (phân bón)')];
+  const alerts = [];
+  if (badCount) alerts.push(`<div class="alert"><span>⚠ Có ${badCount} giao dịch thu mua cần kiểm tra (thiếu thanh toán, trên 5 triệu chưa CK, trùng người bán...)</span><button class="btn s" data-bad>Xem ngay</button></div>`);
+  if (over.length) alerts.push(`<div class="alert"><span>⚠ Bán vượt lượng tồn kho: ${esc(over.join(', '))}. Hãy kiểm tra ngày nhập/bán.</span></div>`);
+  $('#alert-box').innerHTML = alerts.join('');
+
+  const stockRow = (unit) => (z) => `<tr><td><b>${esc(z.item)}</b></td><td class="r"><span class="qty">${fmt(z.qty)}</span></td><td class="r"><span class="unit-price">${money(z.avgCost)} đ</span></td><td class="r"><span class="amt">${money(z.cost)} đ</span></td><td class="r">${moneyTag(z.net, z.net >= 0 ? 'in' : 'loss')}</td></tr>`;
+  $('#dash-stock').innerHTML = stock.map(stockRow('kg')).join('') || emptyRow(5, 'Chưa có dữ liệu.');
+  $('#dash-stock-fert').innerHTML = fstock.map(stockRow('bao')).join('') || emptyRow(5, 'Chưa có dữ liệu.');
+
+  // Giao dịch gần đây: gộp thu mua + bán ra + bán phân bón, mới nhất trước
+  const feed = [
+    ...rows.map((r) => ({ date: r.date, id: r.id, kind: 'Thu mua', cls: 'out', who: r.name, item: r.item, qty: fmt(r.qty) + ' kg', amt: r.total })),
+    ...sales.map((r) => ({ date: r.date, id: r.id, kind: 'Bán ra', cls: 'in', who: '—', item: r.item, qty: fmt(r.qty) + ' kg', amt: r.revenue })),
+    ...fsales.map((r) => ({ date: r.date, id: r.id, kind: 'Bán phân', cls: 'in', who: r.cust_name, item: r.item, qty: fmt(r.qty) + ' bao', amt: r.revenue })),
+  ].sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)).slice(0, 8);
+  $('#dash-recent').innerHTML = feed.map((x) => `<tr><td class="nowrap">${dmy(x.date)}</td><td class="nowrap"><b>${x.kind}</b></td><td>${esc(x.who)}</td><td>${esc(x.item)}</td><td class="r"><span class="qty">${x.qty}</span></td><td class="r">${moneyTag(x.amt, x.cls)}</td></tr>`).join('') || emptyRow(6, 'Chưa có giao dịch.');
 };
 
 /* ---------- THÙNG RÁC & LỊCH SỬ ---------- */
@@ -1049,7 +1102,8 @@ $('#imp-btn').onclick = () => guard(async () => {
   if (!c) return;
   const kh = c.customers || 0;
   const n = c.purchases + c.sales + c.costs + kh;
-  toast(n ? `Đã nhập ${n} dòng: ${c.purchases} mua, ${c.sales} bán, ${c.costs} chi phí, ${kh} khách hàng.` : 'Không có dòng mới nào (đã tồn tại hoặc không đọc được).');
+  const sk = c.skippedNoCustomer ? ` Bỏ qua ${c.skippedNoCustomer} dòng thu mua không có tên và CCCD chưa có trong danh mục Khách hàng.` : '';
+  toast((n ? `Đã nhập ${n} dòng: ${c.purchases} mua, ${c.sales} bán, ${c.costs} chi phí, ${kh} khách hàng.` : 'Không có dòng mới nào (đã tồn tại hoặc không đọc được).') + sk);
   if (c.purchases) show('list');
 });
 
@@ -1084,11 +1138,12 @@ $('#wipe').onclick = () => guard(async () => {
 
 /* ---------- thao tác chung (ủy quyền click) ---------- */
 const OPENERS = { purchase: () => openPurchase(), sale: () => openSale(), cost: () => openCost(), cust: () => openCustomer() };
-const AFTER_DELETE = { purchase: 'list', sale: 'sales', cost: 'cost', customer: 'cust' };
+const AFTER_DELETE = { purchase: 'agri', sale: 'agri', cost: 'agri', customer: 'cust' };
 
 document.addEventListener('click', (e) => {
-  const t = e.target.closest('[data-v],[data-open],[data-act],[data-bad]');
+  const t = e.target.closest('[data-v],[data-open],[data-act],[data-bad],[data-atab]');
   if (!t) return;
+  if (t.dataset.atab) { agriTab = t.dataset.atab; return guard(loaders.agri); }
   if (t.dataset.v) return show(t.dataset.v);
   if (t.dataset.open) return guard(OPENERS[t.dataset.open]);
   if (t.hasAttribute('data-bad')) { $('#q-bad').checked = true; return show('list'); }

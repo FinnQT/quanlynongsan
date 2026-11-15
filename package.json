@@ -33,7 +33,10 @@
     "electronDist": "node_modules/electron/dist",
     "beforePack": "src/main/beforePack.js",
     "files": ["src/**/*", "package.json"],
-    "win": { "target": "nsis" },
+    "win": {
+    "target": "nsis",
+    "signAndEditExecutable": false
+    },
     "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true }
   }
 }

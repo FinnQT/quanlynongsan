@@ -6,7 +6,8 @@ const path = require('path');
 const fs = require('fs');
 const { openDb, getDb } = require('./db');
 const { api } = require('./services');
-const { exportExcel, importExcel } = require('./excel');
+Object.assign(api, require('./fert').api);
+const { exportExcel, importExcel, importCustomersExcel, exportCustomerTemplate } = require('./excel');
 
 let dbPath = '';
 
@@ -82,6 +83,29 @@ function registerIpc() {
     } catch (err) { return { error: 'Không sao lưu được: ' + err.message }; }
   });
 
+  // Nhập danh sách khách hàng từ Excel
+  ipcMain.handle('importCustomers', async (e) => {
+    try {
+      const win = BrowserWindow.fromWebContents(e.sender);
+      const { canceled, filePaths } = await dialog.showOpenDialog(win, { filters: [{ name: 'Excel', extensions: ['xlsx'] }], properties: ['openFile'] });
+      if (canceled) return { data: null };
+      return { data: await importCustomersExcel(filePaths[0]) };
+    } catch (err) { return { error: 'Không đọc được file Excel: ' + err.message }; }
+  });
+
+  // Tải file Excel mẫu để nhập khách hàng
+  ipcMain.handle('customerTemplate', async (e) => {
+    try {
+      const win = BrowserWindow.fromWebContents(e.sender);
+      const { canceled, filePath } = await dialog.showSaveDialog(win, {
+        defaultPath: 'Mau_nhap_khach_hang.xlsx',
+        filters: [{ name: 'Excel', extensions: ['xlsx'] }],
+      });
+      if (canceled) return { data: null };
+      await exportCustomerTemplate(filePath);
+      return { data: filePath };
+    } catch (err) { return { error: 'Không tạo được file mẫu: ' + err.message }; }
+  });
   // Khôi phục từ file database.sqlite đã sao lưu
   ipcMain.handle('restoreDb', async (e) => {
     try {

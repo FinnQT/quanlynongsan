@@ -62,6 +62,34 @@ CREATE TABLE IF NOT EXISTS settings (           -- Thông tin doanh nghiệp (ke
   key    TEXT PRIMARY KEY,
   value  TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS fert_in (            -- Phân bón: nhập kho
+  id        TEXT PRIMARY KEY,                   -- NP01-061126
+  date      TEXT NOT NULL,
+  item      TEXT NOT NULL,                      -- loại phân bón
+  supplier  TEXT NOT NULL DEFAULT '',           -- nhà cung cấp
+  qty       REAL NOT NULL CHECK (qty > 0),      -- số bao
+  price     INTEGER NOT NULL CHECK (price >= 0),-- đồng/bao
+  note      TEXT NOT NULL DEFAULT ''
+);
+CREATE TABLE IF NOT EXISTS fert_sales (         -- Phân bón: bán cho khách
+  id         TEXT PRIMARY KEY,                  -- BP01-061126
+  date       TEXT NOT NULL,
+  cust_id    TEXT NOT NULL DEFAULT '',
+  cust_name  TEXT NOT NULL DEFAULT '',
+  item       TEXT NOT NULL,
+  qty        REAL NOT NULL CHECK (qty > 0),
+  price      INTEGER NOT NULL CHECK (price >= 0),
+  note       TEXT NOT NULL DEFAULT ''
+);
+CREATE TABLE IF NOT EXISTS fert_costs (         -- Phân bón: chi phí
+  id      TEXT PRIMARY KEY,                     -- CF01-061126
+  date    TEXT NOT NULL,
+  item    TEXT NOT NULL,
+  type    TEXT NOT NULL,
+  amount  INTEGER NOT NULL CHECK (amount > 0),
+  note    TEXT NOT NULL DEFAULT ''
+);
+
 CREATE INDEX IF NOT EXISTS idx_purchases_date ON purchases(date);
 CREATE INDEX IF NOT EXISTS idx_sales_date     ON sales(date);
 `;

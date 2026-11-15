@@ -186,7 +186,7 @@ async function importExcel(filePath) {
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.readFile(filePath);
   const db = getDb();
-  const count = { purchases: 0, sales: 0, costs: 0 };
+  const count = { purchases: 0, sales: 0, costs: 0, skippedNoCustomer: 0 };
   const str = (v) => String(v ?? '').trim();
   const deleted = (v) => (/XÓA/.test(str(v)) ? 1 : 0);
 
@@ -203,9 +203,22 @@ async function importExcel(filePath) {
   tx(() => {
     // DU_LIEU: Mã | Ngày | Tên | Địa chỉ | CCCD | SĐT | Hàng | SL | Giá | Tổng | TT | Ghi chú | Trạng thái
     const sheet = wb.getWorksheet('DU_LIEU') || wb.worksheets[0];
+        // Để trống Họ tên + có CCCD -> tự lấy tên/địa chỉ/SĐT từ danh mục Khách hàng; không có sẵn thì bỏ qua dòng.
+    const custByCccd = {};
+    for (const k of db.prepare("SELECT name, phone, cccd, addr FROM customers WHERE deleted = 0 AND cccd <> ''").all()) custByCccd[k.cccd] = k;
     for (const c of readRows(sheet)) {
       const date = toIsoDate(c[1]), item = str(c[6]), qty = Number(c[7]), price = Number(c[8]) || 0;
-      if (!date || !item || !(qty > 0) || !str(c[2])) continue;
+      if (!date || !item || !(qty > 0)) continue;
+      let cccd = str(c[4]).replace(/\s/g, '');
+      if (/^\d{11}$/.test(cccd)) cccd = '0' + cccd;   // Excel hay làm mất số 0 đầu
+      c[4] = cccd;
+      if (!str(c[2])) {
+        const k = custByCccd[cccd];
+        if (!k) { count.skippedNoCustomer++; continue; }
+        c[2] = k.name;
+        if (!str(c[3])) c[3] = k.addr;
+        if (!str(c[5])) c[5] = k.phone;
+      }
       insertRow('purchases', c,
         'SELECT 1 FROM purchases WHERE date=? AND name=? AND item=? AND qty=? AND price=?', [date, str(c[2]), item, qty, price],
         ['date', 'name', 'addr', 'cccd', 'phone', 'item', 'qty', 'price', 'pay', 'note', 'deleted'],
@@ -244,5 +257,76 @@ async function importExcel(filePath) {
   });
   return count;
 }
+/* ======================= NHẬP KHÁCH HÀNG TỪ EXCEL ======================= */
 
-module.exports = { exportExcel, importExcel, moneyToWords };
+/** Bỏ dấu + chữ thường để so khớp tiêu đề cột. */
+const noAccent = (s) => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase().trim();
+
+/** Xuất file mẫu để nhập khách hàng. */
+async function exportCustomerTemplate(filePath) {
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('KHACH_HANG');
+  ws.addRow(['Họ và tên', 'Số điện thoại', 'Số CCCD', 'Địa chỉ', 'Ghi chú']).font = { bold: true };
+  ws.addRow(['Nguyễn Văn A', '0912345678', '012345678901', 'Thôn 1, Xã Ea Kiết, Đắk Lắk', 'Ví dụ - xóa dòng này']);
+  ws.columns.forEach((c) => (c.width = 24));
+  [2, 3].forEach((i) => (ws.getColumn(i).numFmt = '@'));
+  await wb.xlsx.writeFile(filePath);
+}
+
+/**
+ * Nhập danh sách khách hàng từ Excel (dòng 1 là tiêu đề).
+ * Trả về { added, skipped, errors: ['Dòng 5: ...'] }.
+ */
+async function importCustomersExcel(filePath) {
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.readFile(filePath);
+  const ws = wb.getWorksheet('KHACH_HANG') || wb.worksheets[0];
+  if (!ws) throw new Error('File Excel không có sheet nào.');
+  const db = getDb();
+  const str = (v) => String(cellValue(v) ?? '').trim();
+
+  const head = Array.from({ length: 10 }, (_, k) => noAccent(cellValue(ws.getRow(1).getCell(k + 1).value)));
+  const off = /^ma/.test(head[0]) ? 1 : 0;
+  const find = (re, def) => { const i = head.findIndex((h) => re.test(h)); return i >= 0 ? i : def; };
+  const col = {
+    name: find(/ho.*ten|^ten/, off),
+    phone: find(/dien thoai|sdt|phone/, off + 1),
+    cccd: find(/cccd|cmnd|can cuoc/, off + 2),
+    addr: find(/dia chi/, off + 3),
+    note: find(/ghi chu/, off + 4),
+  };
+
+  const existing = db.prepare('SELECT name, phone, cccd FROM customers WHERE deleted = 0').all();
+  const hasKey = new Set(existing.map((c) => `${c.name.toLowerCase()}|${c.phone}`));
+  const hasCccd = new Set(existing.filter((c) => c.cccd).map((c) => c.cccd));
+
+  const result = { added: 0, skipped: 0, errors: [] };
+  const rows = [];
+  ws.eachRow((row, i) => { if (i > 1) rows.push({ i, row }); });
+
+  for (const { i, row } of rows) {
+    const g = (k) => str(row.getCell(col[k] + 1).value);
+    const name = g('name');
+    if (!name) continue;
+
+    let phone = g('phone').replace(/[\s.]/g, '');
+    if (/^[1-9]\d{8}$/.test(phone)) phone = '0' + phone;
+    let cccd = g('cccd').replace(/\s/g, '');
+    if (/^\d{11}$/.test(cccd)) cccd = '0' + cccd;
+
+    const key = `${name.toLowerCase()}|${phone}`;
+    if ((cccd && hasCccd.has(cccd)) || (!cccd && hasKey.has(key))) { result.skipped++; continue; }
+
+    try {
+      S.api.saveCustomer({ name, phone, cccd, addr: g('addr'), note: g('note') });
+      hasKey.add(key);
+      if (cccd) hasCccd.add(cccd);
+      result.added++;
+    } catch (e) {
+      result.errors.push(`Dòng ${i}: ${e.message}`);
+    }
+  }
+  if (result.added) S.log('KH', 'NHẬP KH EXCEL', `Thêm ${result.added} khách hàng từ ${filePath}`);
+  return result;
+}
+module.exports = { exportExcel, importExcel, moneyToWords, importCustomersExcel, exportCustomerTemplate };

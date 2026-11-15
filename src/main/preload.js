@@ -15,6 +15,10 @@ contextBridge.exposeInMainWorld('bridge', {
   api: (name, ...args) => call('api', name, ...args),
   exportExcel: (from, to) => call('exportExcel', from, to),
   importExcel: () => call('importExcel'),
+  importCustomers: () => call('importCustomers'),
+  customerTemplate: () => call('customerTemplate'),
   backupDb: () => call('backupDb'),
   restoreDb: () => call('restoreDb'),
+  importCustomers: () => call('importCustomers'),
+  customerTemplate: () => call('customerTemplate'),
 });

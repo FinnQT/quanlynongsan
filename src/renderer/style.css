@@ -205,7 +205,7 @@ kbd {
 
 main {
   padding: 26px 30px;
-  max-width: 1340px;
+  max-width: none;
   width: 100%;
   min-width: 0;
   overflow-x: hidden
@@ -227,7 +227,114 @@ main>section,
 }
 
 .page-head .btn {
+  flex: none;
+  white-space: nowrap
+}
+
+/* Nhóm nút ở đầu trang: luôn nằm cùng 1 hàng, thu nhỏ cửa sổ thì nút nhỏ lại chứ không nhảy dòng */
+.page-head>div:first-child {
+  flex: 1 1 auto;
+  min-width: 0
+}
+
+.page-head>.row {
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  gap: clamp(6px, 1vw, 12px)
+}
+
+.page-head>.row .btn {
+  padding: 9px clamp(10px, 1.4vw, 18px);
+  font-size: clamp(13px, 1.25vw, 15px)
+}
+
+/* ===== Màn hình Nông sản / Phân bón: vừa khít khung nhìn, bảng cuộn bên trong,
+   dòng TỔNG CỘNG luôn thấy ngay mà không phải kéo cả trang xuống ===== */
+#v-agri:not(.hide),
+#v-fert:not(.hide) {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 52px)
+}
+
+#v-agri>*,
+#v-fert>* {
   flex: none
+}
+
+#v-agri>.card,
+#v-fert>.card {
+  display: flex;
+  flex-direction: column;
+  flex: 0 1 auto;
+  min-height: 0;
+  margin-bottom: 0
+}
+
+#v-agri>.card>*,
+#v-fert>.card>* {
+  flex: none
+}
+
+#v-agri>.card>.tw,
+#v-fert>.card>.tw {
+  flex: 0 1 auto;
+  min-height: 200px;
+  max-block-size: none
+}
+
+#v-agri .kpis,
+#v-fert .kpis {
+  margin-bottom: 14px
+}
+
+#v-agri .kpi,
+#v-fert .kpi {
+  padding: 12px 16px
+}
+
+#v-agri .kpi b,
+#v-fert .kpi b {
+  font-size: 22px;
+  margin-top: 4px
+}
+
+/* Thanh tab (Nông sản / Phân bón): ô và chữ lớn hơn, dễ bấm */
+.tabs {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 0 0 16px
+}
+
+.tabs .btn.s {
+  min-height: 46px;
+  padding: 10px 22px;
+  font-size: 16px;
+  border-radius: 10px
+}
+
+/* Tiêu đề từng khối ở Tổng quan + nút "Xem chi tiết" */
+.dash-h {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin: 6px 0 10px;
+  font-size: 18px
+}
+
+.link-btn {
+  border: 0;
+  background: transparent;
+  color: var(--pri);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 4px
+}
+
+.link-btn:hover {
+  text-decoration: underline
 }
 
 /* ===== 3. Cấu trúc Bảng: phân cách dòng/cột rõ ràng, tiêu đề cố định ===== */
@@ -295,36 +402,36 @@ table {
   font-size: 14.5px
 }
 
-#v-stock table {
-  min-width: 1220px
+#ap-stock table {
+  min-width: 1000px
 }
 
-#v-stock th:first-child,
-#v-stock td:first-child {
+#ap-stock th:first-child,
+#ap-stock td:first-child {
   position: sticky;
   left: 0;
   z-index: 1;
   background: inherit
 }
 
-#v-stock thead th:first-child {
+#ap-stock thead th:first-child {
   background: #e4f1ea;
   z-index: 3
 }
 
-#v-stock tbody tr:nth-child(odd) td:first-child {
+#ap-stock tbody tr:nth-child(odd) td:first-child {
   background: #fff
 }
 
-#v-stock tbody tr:nth-child(even) td:first-child {
+#ap-stock tbody tr:nth-child(even) td:first-child {
   background: #f7faf8
 }
 
-#v-stock tbody tr:hover td:first-child {
+#ap-stock tbody tr:hover td:first-child {
   background: #eaf5ef
 }
 
-#v-stock tfoot th:first-child {
+#ap-stock tfoot th:first-child {
   background: #def0e6;
   z-index: 3
 }
@@ -1404,7 +1511,7 @@ dialog::backdrop {
 @media print {
 
   @page {
-    size: A4 portrait;
+    size: A4 landscape;
     margin: 8mm 7mm
   }
 
@@ -1466,7 +1573,7 @@ dialog::backdrop {
     margin-top: 22px
   }
 
-  /* Định dạng riêng cho Bảng kê 02/TNDN vừa vặn khổ A4 Dọc (Portrait) */
+  /* Định dạng riêng cho Bảng kê 02/TNDN vừa vặn khổ A4 Ngang (Landscape) */
   #print-area.bk-mode {
     padding: 0;
     width: 100%;
@@ -1593,6 +1700,11 @@ dialog::backdrop {
     padding: 20px 22px
   }
 
+  #v-agri:not(.hide),
+  #v-fert:not(.hide) {
+    height: calc(100vh - 40px)
+  }
+
   .two-col {
     grid-template-columns: 1fr
   }
@@ -1653,8 +1765,18 @@ dialog::backdrop {
     padding: 16px
   }
 
+  #v-agri:not(.hide),
+  #v-fert:not(.hide) {
+    height: auto
+  }
+
+  #v-agri>.card>.tw,
+  #v-fert>.card>.tw {
+    max-block-size: min(640px, 70vh)
+  }
+
   .page-head {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 10px
   }
 
@@ -1720,4 +1842,142 @@ dialog::backdrop {
   .total-bar b {
     font-size: 21px
   }
+
+  .page-head h1 {
+    font-size: 20px
+  }
+
+  .page-head>.row .btn {
+    min-height: 36px;
+    padding: 6px 9px;
+    font-size: 12.5px
+  }
+
+  .tabs .btn.s {
+    min-height: 42px;
+    padding: 8px 14px;
+    font-size: 14.5px
+  }
+}
+
+
+/* ===== Dòng TỔNG CỘNG: thu mua, bán ra, chi phí, tồn kho & lợi nhuận (nông sản + phân bón) ===== */
+#tf th,
+#s-foot th,
+#c-foot th,
+#stock-foot th,
+#fi-foot th,
+#fs-foot th,
+#fc-foot th,
+#fk-foot th,
+#tf td,
+#s-foot td,
+#c-foot td,
+#stock-foot td,
+#fi-foot td,
+#fs-foot td,
+#fc-foot td,
+#fk-foot td {
+  background: linear-gradient(180deg, #1d7d52 0%, #104d30 100%);
+  color: #fff;
+  font-size: 15px;
+  padding: 15px 12px;
+  border-top: 0;
+  border-right: 1px solid rgba(255, 255, 255, .16);
+  box-shadow: 0 -10px 18px -10px rgba(15, 40, 29, .35);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, .15)
+}
+
+#tf th:last-child,
+#s-foot th:last-child,
+#c-foot th:last-child,
+#stock-foot th:last-child,
+#fi-foot th:last-child,
+#fs-foot th:last-child,
+#fc-foot th:last-child,
+#fk-foot th:last-child,
+#tf td:last-child,
+#s-foot td:last-child,
+#c-foot td:last-child,
+#stock-foot td:last-child,
+#fi-foot td:last-child,
+#fs-foot td:last-child,
+#fc-foot td:last-child,
+#fk-foot td:last-child {
+  border-right: 0
+}
+
+#ap-stock #stock-foot th:first-child,
+#fp-stock #fk-foot th:first-child,
+#fp-stock #fk-foot td:first-child {
+  background: #104d30;
+  z-index: 3
+}
+
+#tf th:first-child,
+#s-foot th:first-child,
+#c-foot th:first-child,
+#stock-foot th:first-child,
+#fi-foot th:first-child,
+#fs-foot th:first-child,
+#fc-foot th:first-child,
+#fk-foot th:first-child {
+  font-size: 13px;
+  letter-spacing: .6px;
+  white-space: nowrap
+}
+
+#tf th:first-child::before,
+#s-foot th:first-child::before,
+#c-foot th:first-child::before,
+#stock-foot th:first-child::before,
+#fi-foot th:first-child::before,
+#fs-foot th:first-child::before,
+#fc-foot th:first-child::before,
+#fk-foot th:first-child::before {
+  content: "Σ";
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-right: 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, .18);
+  font-size: 14px;
+  letter-spacing: 0
+}
+
+/* Số tiền không có nền riêng thì hiện chữ trắng trên nền xanh */
+#tf .amt:not(.in):not(.out):not(.loss),
+#s-foot .amt:not(.in):not(.out):not(.loss),
+#c-foot .amt:not(.in):not(.out):not(.loss),
+#stock-foot .amt:not(.in):not(.out):not(.loss),
+#fi-foot .amt:not(.in):not(.out):not(.loss),
+#fs-foot .amt:not(.in):not(.out):not(.loss),
+#fc-foot .amt:not(.in):not(.out):not(.loss),
+#fk-foot .amt:not(.in):not(.out):not(.loss) {
+  color: #fff
+}
+
+/* Ô Lợi Nhuận Cuối: pill sáng bo tròn */
+.total-pill {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 16px;
+  font-weight: 800;
+  white-space: nowrap;
+  text-shadow: none;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .25)
+}
+
+.total-pill.in {
+  background: #d9f7e5;
+  color: #0b5a2e
+}
+
+.total-pill.loss {
+  background: #fde8ec;
+  color: #b9253c
 }

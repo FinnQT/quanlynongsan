@@ -45,7 +45,7 @@ function computeLedger(purchases, sales, costs) {
 
 /**
  * Đối soát giao dịch thu mua. Trả về { [id]: ['cảnh báo 1', ...] }.
- * Các quy tắc: CCCD sai, >5 triệu chưa CK, chưa chọn thanh toán,
+ * Các quy tắc: CCCD sai, >5 triệu chưa CK (để trống hình thức thanh toán là hợp lệ),
  * trùng người bán trong ngày, đơn giá lệch >10% so với TB cùng ngày + cùng hàng.
  */
 function findWarnings(purchases) {
@@ -59,8 +59,7 @@ function findWarnings(purchases) {
     const w = [], list = prices[`${r.date}|${r.item}`];
     const mean = list.reduce((s, x) => s + x, 0) / list.length;
     if (r.cccd && !/^\d{12}$/.test(r.cccd)) w.push('CCCD sai số');
-    if (!r.pay) w.push('Chưa chọn thanh toán');
-    else if (total(r) > 5e6 && r.pay !== 'CK') w.push('Trên 5 triệu chưa ghi CK');
+    if (total(r) > 5e6 && r.pay !== 'CK') w.push('Trên 5 triệu chưa ghi CK');
     if (sellerCount[`${r.date}|${r.name.toLowerCase()}`] > 1) w.push('Trùng người bán trong ngày');
     if (list.length > 2 && mean > 0 && Math.abs(r.price - mean) / mean > 0.1) w.push('Đơn giá lệch >10%');
     if (w.length) result[r.id] = w;

@@ -17,6 +17,18 @@ const run = (sql, ...p) => getDb().prepare(sql).run(...p);
 const fmt = (n) => Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 });
 const titleCase = (s) => s.trim().replace(/\s+/g, ' ').toLowerCase().replace(/(^|\s)(\S)/g, (m, a, b) => a + b.toUpperCase());
 
+/** Bỏ dấu tiếng Việt + đ→d + chữ thường: "Đậu Thị Hà" -> "dau thi ha". */
+const normVi = (s) => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').toLowerCase();
+/** Ngày ISO (2026-11-06) -> "06/11/2026" để gõ ngày kiểu Việt Nam cũng tìm được. */
+const dmyStr = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(v) ? v.split('-').reverse().join('/') : v);
+/** Tìm kiếm: không phân biệt hoa/thường và dấu; nhiều từ thì phải chứa đủ TẤT CẢ các từ (thứ tự tùy ý). */
+function matchKw(kw, parts) {
+  const words = normVi(kw).split(/\s+/).filter(Boolean);
+  if (!words.length) return true;
+  const hay = normVi(parts.map(dmyStr).join(' '));
+  return words.every((w) => hay.includes(w));
+}
+
 function log(refId, action, detail = '') {
   run('INSERT INTO history (time, ref_id, action, detail) VALUES (?,?,?,?)',
     new Date().toLocaleString('vi-VN'), refId, action, detail);
@@ -117,9 +129,8 @@ function listPurchases(f = {}) {
   const all = active('purchases');
   const custs = q("SELECT id, name, cccd, (cccd_front != '' OR cccd_back != '') AS hasCccdImg FROM customers WHERE deleted = 0");
   const warnings = findWarnings(all);
-  const kw = (f.q || '').trim().toLowerCase();
   const rows = all
-    .filter((r) => (!kw || [r.id, r.name, r.cccd, r.addr, r.phone].join(' ').toLowerCase().includes(kw))
+    .filter((r) => matchKw(f.q, [r.date, r.id, r.name, r.cccd, r.addr, r.phone, r.item, r.note])
       && (!f.from || r.date >= f.from) && (!f.to || r.date <= f.to)
       && (!f.pay || (f.pay === 'NONE' ? !r.pay : r.pay === f.pay))
       && (!f.item || r.item === f.item)
@@ -183,11 +194,10 @@ function saveCustomer(c) {
 const getCustomer = (id) => one('SELECT * FROM customers WHERE id = ?', id);
 
 function listCustomers(f = {}) {
-  const kw = (f.q || '').trim().toLowerCase();
   const purchases = active('purchases');
   const all = q("SELECT id, name, phone, cccd, addr, note, (cccd_front != '' OR cccd_back != '') AS hasCccdImg FROM customers WHERE deleted = 0 ORDER BY id DESC");
   return all
-    .filter((c) => !kw || [c.id, c.name, c.phone, c.cccd, c.addr, c.note].join(' ').toLowerCase().includes(kw))
+    .filter((c) => matchKw(f.q, [c.id, c.name, c.phone, c.cccd, c.addr, c.note]))
     .map((c) => {
       const matched = purchases.filter((p) => (c.cccd && p.cccd === c.cccd) || p.name.toLowerCase() === c.name.toLowerCase());
       return {
@@ -255,7 +265,8 @@ function saveSale(s) {
 const getSale = (id) => one('SELECT * FROM sales WHERE id = ?', id);
 function listSales(f = {}) {
   return active('sales')
-    .filter((r) => (!f.from || r.date >= f.from) && (!f.to || r.date <= f.to) && (!f.item || r.item === f.item))
+    .filter((r) => (!f.from || r.date >= f.from) && (!f.to || r.date <= f.to) && (!f.item || r.item === f.item)
+      && matchKw(f.q, [r.date, r.id, r.item, r.note]))
     .reverse()
     .map((r) => ({ ...r, revenue: total(r) }));
 }
@@ -289,7 +300,8 @@ function saveCost(c) {
 const getCost = (id) => one('SELECT * FROM costs WHERE id = ?', id);
 function listCosts(f = {}) {
   return active('costs')
-    .filter((r) => (!f.from || r.date >= f.from) && (!f.to || r.date <= f.to) && (!f.item || r.item === f.item))
+    .filter((r) => (!f.from || r.date >= f.from) && (!f.to || r.date <= f.to) && (!f.item || r.item === f.item)
+      && matchKw(f.q, [r.date, r.id, r.item, r.type, r.note]))
     .reverse();
 }
 
@@ -352,11 +364,11 @@ function saveSettings(s) {
 }
 
 function wipeAll() {
-  tx(() => ['purchases', 'sales', 'costs', 'customers', 'history'].forEach((t) => run(`DELETE FROM ${t}`)));
+    tx(() => ['purchases', 'sales', 'costs', 'customers', 'history', 'fert_in', 'fert_sales', 'fert_costs'].forEach((t) => run(`DELETE FROM ${t}`)));
 }
 
 module.exports = {
-  nextCode, active, log, total, fmt, PREFIX,
+  nextCode, active, log, total, fmt, PREFIX, normVi, matchKw,
   api: {
     previewCode,
     savePurchase, listPurchases, getPurchase,
