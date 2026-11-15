@@ -248,22 +248,19 @@ main>section,
   font-size: clamp(13px, 1.25vw, 15px)
 }
 
-/* ===== Màn hình Nông sản / Phân bón: vừa khít khung nhìn, bảng cuộn bên trong,
+/* ===== Màn hình Nông sản: vừa khít khung nhìn, bảng cuộn bên trong,
    dòng TỔNG CỘNG luôn thấy ngay mà không phải kéo cả trang xuống ===== */
-#v-agri:not(.hide),
-#v-fert:not(.hide) {
+#v-agri:not(.hide) {
   display: flex;
   flex-direction: column;
   height: calc(100vh - 52px)
 }
 
-#v-agri>*,
-#v-fert>* {
+#v-agri>* {
   flex: none
 }
 
-#v-agri>.card,
-#v-fert>.card {
+#v-agri>.card {
   display: flex;
   flex-direction: column;
   flex: 0 1 auto;
@@ -271,35 +268,30 @@ main>section,
   margin-bottom: 0
 }
 
-#v-agri>.card>*,
-#v-fert>.card>* {
+#v-agri>.card>* {
   flex: none
 }
 
-#v-agri>.card>.tw,
-#v-fert>.card>.tw {
+#v-agri>.card>.tw {
   flex: 0 1 auto;
   min-height: 200px;
   max-block-size: none
 }
 
-#v-agri .kpis,
-#v-fert .kpis {
+#v-agri .kpis {
   margin-bottom: 14px
 }
 
-#v-agri .kpi,
-#v-fert .kpi {
+#v-agri .kpi {
   padding: 12px 16px
 }
 
-#v-agri .kpi b,
-#v-fert .kpi b {
+#v-agri .kpi b {
   font-size: 22px;
   margin-top: 4px
 }
 
-/* Thanh tab (Nông sản / Phân bón): ô và chữ lớn hơn, dễ bấm */
+/* Thanh tab (Nông sản): ô và chữ lớn hơn, dễ bấm */
 .tabs {
   display: flex;
   gap: 10px;
@@ -1700,8 +1692,7 @@ dialog::backdrop {
     padding: 20px 22px
   }
 
-  #v-agri:not(.hide),
-  #v-fert:not(.hide) {
+  #v-agri:not(.hide) {
     height: calc(100vh - 40px)
   }
 
@@ -1765,13 +1756,11 @@ dialog::backdrop {
     padding: 16px
   }
 
-  #v-agri:not(.hide),
-  #v-fert:not(.hide) {
+  #v-agri:not(.hide) {
     height: auto
   }
 
-  #v-agri>.card>.tw,
-  #v-fert>.card>.tw {
+  #v-agri>.card>.tw {
     max-block-size: min(640px, 70vh)
   }
 
@@ -1861,23 +1850,15 @@ dialog::backdrop {
 }
 
 
-/* ===== Dòng TỔNG CỘNG: thu mua, bán ra, chi phí, tồn kho & lợi nhuận (nông sản + phân bón) ===== */
+/* ===== Dòng TỔNG CỘNG: thu mua, bán ra, chi phí, tồn kho & lợi nhuận  ===== */
 #tf th,
 #s-foot th,
 #c-foot th,
 #stock-foot th,
-#fi-foot th,
-#fs-foot th,
-#fc-foot th,
-#fk-foot th,
 #tf td,
 #s-foot td,
 #c-foot td,
-#stock-foot td,
-#fi-foot td,
-#fs-foot td,
-#fc-foot td,
-#fk-foot td {
+#stock-foot td {
   background: linear-gradient(180deg, #1d7d52 0%, #104d30 100%);
   color: #fff;
   font-size: 15px;
@@ -1892,24 +1873,14 @@ dialog::backdrop {
 #s-foot th:last-child,
 #c-foot th:last-child,
 #stock-foot th:last-child,
-#fi-foot th:last-child,
-#fs-foot th:last-child,
-#fc-foot th:last-child,
-#fk-foot th:last-child,
 #tf td:last-child,
 #s-foot td:last-child,
 #c-foot td:last-child,
-#stock-foot td:last-child,
-#fi-foot td:last-child,
-#fs-foot td:last-child,
-#fc-foot td:last-child,
-#fk-foot td:last-child {
+#stock-foot td:last-child {
   border-right: 0
 }
 
-#ap-stock #stock-foot th:first-child,
-#fp-stock #fk-foot th:first-child,
-#fp-stock #fk-foot td:first-child {
+#ap-stock #stock-foot th:first-child {
   background: #104d30;
   z-index: 3
 }
@@ -1917,11 +1888,7 @@ dialog::backdrop {
 #tf th:first-child,
 #s-foot th:first-child,
 #c-foot th:first-child,
-#stock-foot th:first-child,
-#fi-foot th:first-child,
-#fs-foot th:first-child,
-#fc-foot th:first-child,
-#fk-foot th:first-child {
+#stock-foot th:first-child {
   font-size: 13px;
   letter-spacing: .6px;
   white-space: nowrap
@@ -1930,11 +1897,7 @@ dialog::backdrop {
 #tf th:first-child::before,
 #s-foot th:first-child::before,
 #c-foot th:first-child::before,
-#stock-foot th:first-child::before,
-#fi-foot th:first-child::before,
-#fs-foot th:first-child::before,
-#fc-foot th:first-child::before,
-#fk-foot th:first-child::before {
+#stock-foot th:first-child::before {
   content: "Σ";
   display: inline-grid;
   place-items: center;
@@ -1951,11 +1914,7 @@ dialog::backdrop {
 #tf .amt:not(.in):not(.out):not(.loss),
 #s-foot .amt:not(.in):not(.out):not(.loss),
 #c-foot .amt:not(.in):not(.out):not(.loss),
-#stock-foot .amt:not(.in):not(.out):not(.loss),
-#fi-foot .amt:not(.in):not(.out):not(.loss),
-#fs-foot .amt:not(.in):not(.out):not(.loss),
-#fc-foot .amt:not(.in):not(.out):not(.loss),
-#fk-foot .amt:not(.in):not(.out):not(.loss) {
+#stock-foot .amt:not(.in):not(.out):not(.loss) {
   color: #fff
 }
 

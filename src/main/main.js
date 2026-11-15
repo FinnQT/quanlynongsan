@@ -6,7 +6,6 @@ const path = require('path');
 const fs = require('fs');
 const { openDb, getDb } = require('./db');
 const { api } = require('./services');
-Object.assign(api, require('./fert').api);
 const { exportExcel, importExcel, importCustomersExcel, exportCustomerTemplate } = require('./excel');
 
 let dbPath = '';

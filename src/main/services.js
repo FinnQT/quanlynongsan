@@ -364,7 +364,7 @@ function saveSettings(s) {
 }
 
 function wipeAll() {
-    tx(() => ['purchases', 'sales', 'costs', 'customers', 'history', 'fert_in', 'fert_sales', 'fert_costs'].forEach((t) => run(`DELETE FROM ${t}`)));
+    tx(() => ['purchases', 'sales', 'costs', 'customers', 'history'].forEach((t) => run(`DELETE FROM ${t}`)));
 }
 
 module.exports = {

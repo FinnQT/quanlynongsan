@@ -23,7 +23,6 @@
         <button data-v="dash"><i aria-hidden="true">🏠</i>Tổng quan</button>
         <p class="nav-title">Kinh doanh</p>
         <button data-v="agri"><i aria-hidden="true">🌱</i>Nông sản</button>
-        <button data-v="fert"><i aria-hidden="true">🌾</i>Phân bón</button>
         <p class="nav-title">Đối tác</p>
         <button data-v="cust"><i aria-hidden="true">👥</i>Khách hàng</button>
         <p class="nav-title">Báo cáo</p>
@@ -43,23 +42,19 @@
         <header class="page-head">
           <div>
             <h1>Tổng quan</h1>
-            <p class="mut">Tình hình kinh doanh nông sản và phân bón hiện tại</p>
+            <p class="mut">Tình hình kinh doanh nông sản hiện tại</p>
           </div>
         </header>
         <div class="quick">
           <button class="quick-btn" data-open="purchase"><span aria-hidden="true">🛒</span>Thu mua mới</button>
           <button class="quick-btn" data-open="sale"><span aria-hidden="true">💰</span>Ghi nhận bán</button>
           <button class="quick-btn" data-open="cost"><span aria-hidden="true">🚚</span>Thêm chi phí</button>
-          <button class="quick-btn" data-open="fin"><span aria-hidden="true">📥</span>Nhập phân bón</button>
-          <button class="quick-btn" data-open="fsale"><span aria-hidden="true">🌾</span>Bán phân bón</button>
           <button class="quick-btn" data-v="excel"><span aria-hidden="true">📊</span>Xuất bảng kê</button>
         </div>
         <div id="alert-box"></div>
 
         <h2 class="dash-h">🌱 Nông sản <button type="button" class="link-btn" data-v="agri">Xem chi tiết ›</button></h2>
         <div class="kpis" id="kpis"></div>
-        <h2 class="dash-h">🌾 Phân bón <button type="button" class="link-btn" data-v="fert">Xem chi tiết ›</button></h2>
-        <div class="kpis" id="kpis-fert"></div>
 
         <div class="two-col" style="margin-bottom:18px">
           <div class="card">
@@ -76,23 +71,6 @@
                   </tr>
                 </thead>
                 <tbody id="dash-stock"></tbody>
-              </table>
-            </div>
-          </div>
-          <div class="card">
-            <h2>Tồn kho phân bón</h2>
-            <div class="tw" tabindex="0" role="region" aria-label="Tồn kho phân bón theo loại">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Loại phân bón</th>
-                    <th class="r">Còn (bao)</th>
-                    <th class="r">Đơn giá TB</th>
-                    <th class="r">Giá trị tồn kho</th>
-                    <th class="r">Lợi Nhuận Cuối</th>
-                  </tr>
-                </thead>
-                <tbody id="dash-stock-fert"></tbody>
               </table>
             </div>
           </div>
@@ -325,117 +303,6 @@
             </table>
           </div>
         </div>
-      </section>
-
-      <!-- ============ BÁN PHÂN BÓN (tách riêng, đơn vị: bao) ============ -->
-      <section id="v-fert" class="hide">
-        <header class="page-head">
-          <div>
-            <h1>Bán phân bón</h1>
-            <p class="mut">Tính theo bao, độc lập với thu mua nông sản. Giá vốn bình quân di động theo từng loại phân.</p>
-          </div>
-          <div class="row" style="margin:0">
-            <button class="btn ghost" data-open="fin">＋ Nhập kho</button>
-            <button class="btn ghost" data-open="fcost">＋ Chi phí</button>
-            <button class="btn" data-open="fsale">＋ Bán cho khách</button>
-          </div>
-        </header>
-
-        <div class="kpis" id="f-kpis"></div>
-
-        <div id="f-tabs" class="tabs">
-          <button type="button" class="btn s" data-ftab="sale">💰 Bán ra</button>
-          <button type="button" class="btn s ghost" data-ftab="in">📥 Nhập kho</button>
-          <button type="button" class="btn s ghost" data-ftab="cost">🚚 Chi phí</button>
-          <button type="button" class="btn s ghost" data-ftab="stock">📦 Tồn kho &amp; lợi nhuận</button>
-        </div>
-
-        <!-- Tab: Bán ra -->
-        <div class="card" id="fp-sale">
-          <div class="toolbar">
-            <div class="field"><label for="fs-from">Từ ngày</label><input id="fs-from" type="date"></div>
-            <div class="field"><label for="fs-to">Đến ngày</label><input id="fs-to" type="date"></div>
-            <div class="field grow"><label for="fs-q">Tìm kiếm</label><input id="fs-q" type="search" placeholder="Tên khách, loại phân, ghi chú..." spellcheck="false"></div>
-            <div class="field"><label for="fs-item">Loại hàng</label><select id="fs-item"></select></div>
-          </div>
-          <div class="tw" tabindex="0" role="region" aria-label="Danh sách bán phân bón">
-            <table>
-              <thead><tr>
-                <th>Mã</th><th>Ngày</th><th>Khách hàng</th><th>Loại phân bón</th>
-                <th class="r">Số bao</th><th class="r">Đơn giá/bao</th><th class="r">Thành tiền</th>
-                <th>Ghi chú</th><th class="c">Thao tác</th>
-              </tr></thead>
-              <tbody id="fs-table"></tbody>
-              <tfoot id="fs-foot"></tfoot>
-            </table>
-          </div>
-        </div>
-
-        <!-- Tab: Nhập kho -->
-        <div class="card hide" id="fp-in">
-          <div class="toolbar">
-            <div class="field"><label for="fi-from">Từ ngày</label><input id="fi-from" type="date"></div>
-            <div class="field"><label for="fi-to">Đến ngày</label><input id="fi-to" type="date"></div>
-            <div class="field grow"><label for="fi-q">Tìm kiếm</label><input id="fi-q" type="search" placeholder="Loại phân, nhà cung cấp, ghi chú..." spellcheck="false"></div>
-            <div class="field"><label for="fi-item">Loại hàng</label><select id="fi-item"></select></div>
-          </div>
-          <div class="tw" tabindex="0" role="region" aria-label="Danh sách nhập kho phân bón">
-            <table>
-              <thead><tr>
-                <th>Mã</th><th>Ngày</th><th>Loại phân bón</th><th>Nhà cung cấp</th>
-                <th class="r">Số bao</th><th class="r">Đơn giá nhập/bao</th><th class="r">Thành tiền</th>
-                <th>Ghi chú</th><th class="c">Thao tác</th>
-              </tr></thead>
-              <tbody id="fi-table"></tbody>
-              <tfoot id="fi-foot"></tfoot>
-            </table>
-          </div>
-        </div>
-
-        <!-- Tab: Chi phí -->
-        <div class="card hide" id="fp-cost">
-          <div class="toolbar">
-            <div class="field"><label for="fc-from">Từ ngày</label><input id="fc-from" type="date"></div>
-            <div class="field"><label for="fc-to">Đến ngày</label><input id="fc-to" type="date"></div>
-            <div class="field grow"><label for="fc-q">Tìm kiếm</label><input id="fc-q" type="search" placeholder="Loại phân, loại chi phí, ghi chú..." spellcheck="false"></div>
-          </div>
-          <div class="tw" tabindex="0" role="region" aria-label="Danh sách chi phí phân bón">
-            <table>
-              <thead><tr>
-                <th>Mã</th><th>Ngày</th><th>Loại phân bón</th><th>Loại chi phí</th>
-                <th class="r">Số tiền</th><th>Ghi chú</th><th class="c">Thao tác</th>
-              </tr></thead>
-              <tbody id="fc-table"></tbody>
-              <tfoot id="fc-foot"></tfoot>
-            </table>
-          </div>
-        </div>
-
-        <!-- Tab: Tồn kho & lợi nhuận -->
-        <div class="card hide" id="fp-stock">
-          <div class="toolbar" style="border-bottom:0;margin-bottom:12px;padding-bottom:0">
-            <div class="field" style="min-width:260px">
-              <label for="fk-item">Lọc theo loại phân bón</label>
-              <select id="fk-item"></select>
-            </div>
-          </div>
-          <div class="tw" tabindex="0" role="region" aria-label="Tồn kho và lợi nhuận phân bón">
-            <table>
-              <thead><tr>
-                <th>Loại phân bón</th><th class="r">Bao đã nhập</th><th class="r">Tiền nhập</th>
-                <th class="r">Bao đã bán</th><th class="r">Bao còn lại</th><th class="r">Đơn giá TB/bao</th>
-                <th class="r">Giá trị tồn kho</th><th class="r">Doanh thu</th>
-                <th class="r">Chi phí</th><th class="r">Lợi Nhuận Cuối</th>
-              </tr></thead>
-              <tbody id="fk-table"></tbody>
-              <tfoot id="fk-foot"></tfoot>
-            </table>
-          </div>
-          <p class="mut" id="fk-note"></p>
-        </div>
-
-        <datalist id="fert-items"></datalist>
-        <datalist id="fert-custs"></datalist>
       </section>
 
       <!-- ============ EXCEL ============ -->
@@ -671,88 +538,6 @@
     </div>
   </dialog>
 
-    <!-- ===== PHÂN BÓN: Nhập kho ===== -->
-  <dialog id="dlg-fin" aria-labelledby="fin-title">
-    <div class="dlg-head">
-      <h2 id="fin-title">Nhập kho phân bón</h2>
-      <button type="button" class="icon-btn" command="close" commandfor="dlg-fin" aria-label="Đóng">✕</button>
-    </div>
-    <div class="dlg-body">
-      <div class="grid">
-        <div><label for="fin-id">Mã phiếu nhập</label><input id="fin-id" readonly placeholder="Tự tạo theo ngày"></div>
-        <div><label for="fin-date">Ngày nhập</label><input id="fin-date" type="date"></div>
-        <div class="wide"><label for="fin-sel">Loại phân bón</label><select id="fin-sel"></select><input id="fin-item" autocomplete="off" placeholder="Nhập tên loại phân bón mới" style="display:none;margin-top:6px"></div>
-        <div class="wide"><label for="fin-sup">Nhà cung cấp</label><input id="fin-sup" placeholder="Đại lý / công ty"></div>
-        <div><label for="fin-qty">Số bao nhập</label><input id="fin-qty" type="text" data-num="dec" inputmode="decimal" placeholder="VD: 200"></div>
-        <div><label for="fin-price">Đơn giá nhập (đồng/bao)</label><input id="fin-price" type="text" data-num="money" inputmode="numeric" placeholder="VD: 480,000"></div>
-        <div class="wide"><label for="fin-note">Ghi chú</label><input id="fin-note" placeholder="Số hóa đơn, xe giao..."></div>
-      </div>
-      <div class="total-bar"><span>Tổng tiền nhập</span><b id="fin-total">0 đ</b></div>
-      <p class="form-err" role="alert" hidden></p>
-    </div>
-    <div class="dlg-foot">
-      <button type="button" class="btn ghost" command="close" commandfor="dlg-fin">Hủy</button>
-      <button type="button" class="btn" id="fin-save">Lưu phiếu nhập</button>
-    </div>
-  </dialog>
-
-  <!-- ===== PHÂN BÓN: Bán cho khách ===== -->
-  <dialog id="dlg-fsale" aria-labelledby="fsd-title">
-    <div class="dlg-head">
-      <h2 id="fsd-title">Bán phân bón cho khách</h2>
-      <button type="button" class="icon-btn" command="close" commandfor="dlg-fsale" aria-label="Đóng">✕</button>
-    </div>
-    <div class="dlg-body">
-      <div class="grid">
-        <div><label for="fsd-id">Mã bán</label><input id="fsd-id" readonly placeholder="Tự tạo theo ngày"></div>
-        <div><label for="fsd-date">Ngày bán</label><input id="fsd-date" type="date"></div>
-        <div class="wide"><label for="fsd-cust">Khách hàng (gõ để tìm trong danh sách Khách hàng)</label><input id="fsd-cust" list="fert-custs" autocomplete="off" placeholder="Gõ tên, mã KH hoặc số điện thoại..."></div>
-        <div class="wide"><label for="fsd-sel">Loại phân bón</label><select id="fsd-sel"></select><input id="fsd-item" autocomplete="off" placeholder="Nhập tên loại phân bón mới" style="display:none;margin-top:6px"></div> 
-        <div><label for="fsd-qty">Số bao bán</label><input id="fsd-qty" type="text" data-num="dec" inputmode="decimal" placeholder="VD: 20"></div>
-        <div><label for="fsd-price">Giá bán (đồng/bao)</label><input id="fsd-price" type="text" data-num="money" inputmode="numeric" placeholder="VD: 520,000"></div>
-        <div class="wide"><label for="fsd-note">Ghi chú</label><input id="fsd-note" placeholder="Giao hàng, ghi nợ..."></div>
-      </div>
-      <div class="stock-hint"><span id="fsd-stock"></span><button type="button" class="btn s ghost" id="fsd-fill">Bán hết tồn</button></div>
-      <div class="total-bar"><span>Tổng thành tiền</span><b id="fsd-total">0 đ</b></div>
-      <p class="form-err" role="alert" hidden></p>
-    </div>
-    <div class="dlg-foot">
-      <button type="button" class="btn ghost" command="close" commandfor="dlg-fsale">Hủy</button>
-      <button type="button" class="btn" id="fsd-save">Lưu lần bán</button>
-    </div>
-  </dialog>
-
-  <!-- ===== PHÂN BÓN: Chi phí ===== -->
-  <dialog id="dlg-fcost" aria-labelledby="fcd-title">
-    <div class="dlg-head">
-      <h2 id="fcd-title">Thêm chi phí phân bón</h2>
-      <button type="button" class="icon-btn" command="close" commandfor="dlg-fcost" aria-label="Đóng">✕</button>
-    </div>
-    <div class="dlg-body">
-      <div class="grid">
-        <div><label for="fcd-id">Mã chi phí</label><input id="fcd-id" readonly placeholder="Tự tạo theo ngày"></div>
-        <div><label for="fcd-date">Ngày chi</label><input id="fcd-date" type="date"></div>
-        <div><label for="fcd-sel">Loại phân bón</label><select id="fcd-sel"></select><input id="fcd-item" autocomplete="off" placeholder="Nhập tên loại phân bón mới" style="display:none;margin-top:6px"></div>       
-        <div><label for="fcd-type">Loại chi phí</label>
-          <select id="fcd-type">
-            <option>Vận chuyển</option>
-            <option>Bốc xếp</option>
-            <option>Hao hụt / rách bao</option>
-            <option>Nhân công</option>
-            <option>Khác</option>
-          </select>
-        </div>
-        <div><label for="fcd-amt">Số tiền (đồng)</label><input id="fcd-amt" type="text" data-num="money" inputmode="numeric" placeholder="VD: 350,000"></div>
-        <div class="wide"><label for="fcd-note">Ghi chú</label><input id="fcd-note" placeholder="Xe, biển số, nội dung chi..."></div>
-      </div>
-      <p class="form-err" role="alert" hidden></p>
-    </div>
-    <div class="dlg-foot">
-      <button type="button" class="btn ghost" command="close" commandfor="dlg-fcost">Hủy</button>
-      <button type="button" class="btn" id="fcd-save">Lưu chi phí</button>
-    </div>
-  </dialog>
-
   <!-- ============ HỘP THOẠI: KHÁCH HÀNG ============ -->
   <dialog id="dlg-cust" aria-labelledby="dk-title">
     <div class="dlg-head">
@@ -856,7 +641,6 @@
   <!-- Thông báo nhanh: popover để luôn nằm trên cả hộp thoại -->
   <div id="toast" popover="manual" role="status"></div>
   <script src="renderer.js"></script>
-  <script src="fert.js"></script>
 </body>
 
 </html>

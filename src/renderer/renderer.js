@@ -895,8 +895,8 @@ loaders.agri = async () => {
 
 /* ---------- TỔNG QUAN ---------- */
 loaders.dash = async () => {
-  const [stock, { rows, badCount }, sales, fstock, fsales] = await Promise.all([
-    api('stockReport'), api('listPurchases', {}), api('listSales', {}), api('fertStock'), api('listFertSales', {}),
+  const [stock, { rows, badCount }, sales] = await Promise.all([
+    api('stockReport'), api('listPurchases', {}), api('listSales', {}),
   ]);
   const sum = (arr, k) => arr.reduce((s, z) => s + z[k], 0);
   const kpis = (arr, unit, revLabel) => {
@@ -909,10 +909,9 @@ loaders.dash = async () => {
     ].map(([t, v, c]) => `<div class="kpi ${c}"><small>${t}</small><b>${v}</b></div>`).join('');
   };
   $('#kpis').innerHTML = kpis(stock, 'kg', 'Doanh thu đã bán');
-  $('#kpis-fert').innerHTML = kpis(fstock, 'bao', 'Doanh thu đã bán');
 
   // Cảnh báo: giao dịch thu mua bất thường + bán vượt tồn kho
-  const over = [...stock.filter((z) => z.oversold).map((z) => z.item + ' (nông sản)'), ...fstock.filter((z) => z.oversold).map((z) => z.item + ' (phân bón)')];
+  const over = stock.filter((z) => z.oversold).map((z) => z.item);
   const alerts = [];
   if (badCount) alerts.push(`<div class="alert"><span>⚠ Có ${badCount} giao dịch thu mua cần kiểm tra (thiếu thanh toán, trên 5 triệu chưa CK, trùng người bán...)</span><button class="btn s" data-bad>Xem ngay</button></div>`);
   if (over.length) alerts.push(`<div class="alert"><span>⚠ Bán vượt lượng tồn kho: ${esc(over.join(', '))}. Hãy kiểm tra ngày nhập/bán.</span></div>`);
@@ -920,13 +919,11 @@ loaders.dash = async () => {
 
   const stockRow = (unit) => (z) => `<tr><td><b>${esc(z.item)}</b></td><td class="r"><span class="qty">${fmt(z.qty)}</span></td><td class="r"><span class="unit-price">${money(z.avgCost)} đ</span></td><td class="r"><span class="amt">${money(z.cost)} đ</span></td><td class="r">${moneyTag(z.net, z.net >= 0 ? 'in' : 'loss')}</td></tr>`;
   $('#dash-stock').innerHTML = stock.map(stockRow('kg')).join('') || emptyRow(5, 'Chưa có dữ liệu.');
-  $('#dash-stock-fert').innerHTML = fstock.map(stockRow('bao')).join('') || emptyRow(5, 'Chưa có dữ liệu.');
 
-  // Giao dịch gần đây: gộp thu mua + bán ra + bán phân bón, mới nhất trước
+  // Giao dịch gần đây: gộp thu mua + bán ra, mới nhất trước
   const feed = [
     ...rows.map((r) => ({ date: r.date, id: r.id, kind: 'Thu mua', cls: 'out', who: r.name, item: r.item, qty: fmt(r.qty) + ' kg', amt: r.total })),
     ...sales.map((r) => ({ date: r.date, id: r.id, kind: 'Bán ra', cls: 'in', who: '—', item: r.item, qty: fmt(r.qty) + ' kg', amt: r.revenue })),
-    ...fsales.map((r) => ({ date: r.date, id: r.id, kind: 'Bán phân', cls: 'in', who: r.cust_name, item: r.item, qty: fmt(r.qty) + ' bao', amt: r.revenue })),
   ].sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)).slice(0, 8);
   $('#dash-recent').innerHTML = feed.map((x) => `<tr><td class="nowrap">${dmy(x.date)}</td><td class="nowrap"><b>${x.kind}</b></td><td>${esc(x.who)}</td><td>${esc(x.item)}</td><td class="r"><span class="qty">${x.qty}</span></td><td class="r">${moneyTag(x.amt, x.cls)}</td></tr>`).join('') || emptyRow(6, 'Chưa có giao dịch.');
 };
